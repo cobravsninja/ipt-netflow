@@ -4787,6 +4787,11 @@ static inline int eth_p_vlan(__be16 eth_type)
 		eth_type == htons(ETH_P_8021AD);
 }
 
+u_int16_t get_vlan_id(const struct sk_buff *skb) {
+	struct vlan_dev_priv *vlan = vlan_dev_priv(skb->dev);
+	return vlan->vlan_id;
+}
+
 /* Extract all L2 header data, currently (in iptables) skb->data is
  * pointing to network_header, so we use mac_header instead. */
 /* Parse eth header, then vlans, then mpls. */
@@ -4803,8 +4808,11 @@ static void parse_l2_header(const struct sk_buff *skb, struct ipt_netflow_tuple 
 	int tag_num = 0;
 
 	/* get vlan tag that is saved in skb->vlan_tci */
-	if (vlan_tx_tag_present(skb))
+	if (vlan_tx_tag_present(skb)) {
 		tuple->tag[tag_num++] = htons(vlan_tx_tag_get(skb));
+	} else if(is_vlan_dev(skb->dev)) {
+		tuple->tag[tag_num++] = htons(get_vlan_id(skb));
+	}
 # endif
 	if (mac_header < skb->head ||
 	    mac_header + ETH_HLEN > skb->data)
